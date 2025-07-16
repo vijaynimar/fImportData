@@ -16,7 +16,8 @@ let userAccessToken = null;
 
 // 1. Redirect to Facebook login
 app.get('/login/facebook', (req, res) => {
-  const scope = 'public_profile,email,user_photos,user_videos';
+//   const scope = 'public_profile,email,user_photos,user_videos';
+  const scope = 'user_birthday';
   const fbLoginUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI
   )}&scope=${scope}&response_type=code`;
@@ -50,6 +51,36 @@ console.log('Received code:', code);
     res.status(500).json({ error: 'Token exchange failed' });
   }
 });
+
+
+app.get('/api/facebook/birthday', async (req, res) => {
+  const {token} = req.body;
+  console.log('Received token:', token);
+  userAccessToken = token
+  if (!userAccessToken) {
+    return res.status(400).json({ error: 'Missing access token' });
+  }
+
+  try {
+    const profileResponse = await axios.get('https://graph.facebook.com/me', {
+      params: {
+        fields: 'id,name,birthday',
+        access_token: userAccessToken,
+      },
+    });
+
+    res.json({
+      message: 'User birthday fetched ✅',
+      birthday: profileResponse.data.birthday || null,
+      profile: profileResponse.data,
+    });
+  } catch (err) {
+    console.error('Error fetching birthday:', err.response?.data || err);
+    res.status(500).json({ error: 'Failed to fetch birthday' });
+  }
+});
+
+
 
 //b 3. Separate media endpoint (photos & videos)
 app.get('/api/facebook/media', async (req, res) => {
